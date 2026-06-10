@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import axiosInstance from "../api/axios";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+import { Trash2 } from "lucide-react";
 
 const ChatWindow = ({ selectedUser }) => {
   const { user } = useAuth();
@@ -66,6 +67,16 @@ const ChatWindow = ({ selectedUser }) => {
     }
   };
 
+  const handleClearChat = async () => {
+    if (!window.confirm("Are you sure you want to clear this chat history?")) return;
+    try {
+      await axiosInstance.delete(`/messages/clear/${selectedUser._id}`);
+      setMessages([]);
+    } catch (error) {
+      console.error("Error clearing chat:", error);
+    }
+  };
+
   if (!selectedUser) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
@@ -95,6 +106,13 @@ const ChatWindow = ({ selectedUser }) => {
           <p className="font-semibold text-slate-800">{selectedUser.name}</p>
           <p className="text-xs text-slate-400">{isSelectedUserOnline ? "Online" : "Offline"}</p>
         </div>
+        <button 
+          onClick={handleClearChat}
+          className="ml-auto p-2 text-slate-400 hover:text-rose-500 rounded-full hover:bg-slate-50 transition-colors cursor-pointer"
+          title="Clear Chat"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-slate-50">

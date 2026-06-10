@@ -30,4 +30,20 @@ const getMessages = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage, getMessages };
+const clearChat = async (req, res) => {
+  try {
+    const { userId: otherUserId } = req.params;
+    const myId = req.user._id;
+    await Message.deleteMany({
+      $or: [
+        { senderId: myId, receiverId: otherUserId },
+        { senderId: otherUserId, receiverId: myId },
+      ],
+    });
+    res.status(200).json({ message: "Chat cleared successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error. Please try again." });
+  }
+};
+
+module.exports = { sendMessage, getMessages, clearChat };
