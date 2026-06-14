@@ -1,25 +1,34 @@
 // socket/socketHandler.js
 const socketHandler = (io) => {
+  // Maps userId -> Set of socketIds
   const onlineUsers = new Map();
 
   io.on("connection", (socket) => {
-    console.log(`⚡ Socket Connected: ${socket.id}`);
-
     socket.on("user_connected", (userId) => {
-      onlineUsers.set(userId, socket.id);
+      if (!onlineUsers.has(userId)) {
+        onlineUsers.set(userId, new Set());
+      }
+      onlineUsers.get(userId).add(socket.id);
       io.emit("online_users", Array.from(onlineUsers.keys()));
     });
 
     socket.on("send_message", (messageData) => {
-      const receiverSocketId = onlineUsers.get(messageData.receiverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("receive_message", messageData);
+      const receiverSockets = onlineUsers.get(messageData.receiverId);
+      if (receiverSockets && receiverSockets.size > 0) {
+        receiverSockets.forEach((socketId) => {
+          io.to(socketId).emit("receive_message", messageData);
+        });
       }
     });
 
     socket.on("disconnect", () => {
-      onlineUsers.forEach((socketId, userId) => {
-        if (socketId === socket.id) onlineUsers.delete(userId);
+      onlineUsers.forEach((socketIds, userId) => {
+        if (socketIds.has(socket.id)) {
+          socketIds.delete(socket.id);
+          if (socketIds.size === 0) {
+            onlineUsers.delete(userId);
+          }
+        }
       });
       io.emit("online_users", Array.from(onlineUsers.keys()));
     });
@@ -27,3 +36,5 @@ const socketHandler = (io) => {
 };
 
 module.exports = socketHandler;
+
+

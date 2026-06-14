@@ -18,6 +18,10 @@ export const SocketProvider = ({ children }) => {
         newSocket.emit("user_connected", user._id);
       });
 
+      if (newSocket.connected) {
+        newSocket.emit("user_connected", user._id);
+      }
+
       newSocket.on("online_users", (users) => {
         setOnlineUsers(users);
       });

@@ -1,15 +1,52 @@
-// controllers/messageController.js
 const Message = require("../models/Message");
+const cloudinary = require("../config/cloudinary");
 
 const sendMessage = async (req, res) => {
   try {
-    const { receiverId, text } = req.body;
+    const { receiverId, text, image } = req.body;
     const senderId = req.user._id;
-    if (!receiverId || !text)
-      return res.status(400).json({ message: "Please provide receiver and message" });
-    const newMessage = await Message.create({ senderId, receiverId, text });
+
+    if (!receiverId) {
+      return res.status(400).json({ message: "Please provide a receiver ID" });
+    }
+
+    if (!text && !image) {
+      return res.status(400).json({ message: "Please provide either text or an image message" });
+    }
+
+    let imageUrl = "";
+    if (image) {
+      const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+                           process.env.CLOUDINARY_CLOUD_NAME !== "your_cloudinary_cloud_name" &&
+                           process.env.CLOUDINARY_API_KEY && 
+                           process.env.CLOUDINARY_API_SECRET;
+
+      if (hasCloudinary) {
+        try {
+          const uploadResponse = await cloudinary.uploader.upload(image, {
+            folder: "chat_messages",
+          });
+          imageUrl = uploadResponse.secure_url;
+        } catch (uploadError) {
+          console.warn("Cloudinary message image upload failed, falling back to base64:", uploadError.message);
+          imageUrl = image;
+        }
+      } else {
+        console.log("Cloudinary not configured or placeholder. Storing message image as base64 in DB.");
+        imageUrl = image;
+      }
+    }
+
+    const newMessage = await Message.create({
+      senderId,
+      receiverId,
+      text: text || "",
+      image: imageUrl,
+    });
+
     res.status(201).json(newMessage);
   } catch (error) {
+    console.error("Error in sendMessage controller:", error);
     res.status(500).json({ message: "Server error. Please try again." });
   }
 };

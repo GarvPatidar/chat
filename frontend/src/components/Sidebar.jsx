@@ -1,36 +1,37 @@
 // components/Sidebar.jsx
 import { useEffect, useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import axiosInstance from "../api/axios";
+import ProfileModal from "./ProfileModal";
 
-const Sidebar = ({ selectedUser, onSelectUser }) => {
+const Sidebar = ({ selectedUser, onSelectUser, users = [], loading = false, unreadCounts = {} }) => {
   const { user, logout } = useAuth();
   const { onlineUsers } = useSocket();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axiosInstance.get("/auth/users");
-        setUsers(response.data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
-  }, []);
 
   return (
     <div className="w-72 bg-white border-r border-slate-200 flex flex-col h-full">
-      <div className="p-4 border-b border-slate-200">
-        <h1 className="text-xl font-bold text-slate-800">💬 ChatApp</h1>
-        <p className="text-sm text-slate-500 mt-1">Hey, {user?.name}!</p>
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">💬 ChatApp</h1>
+          <p className="text-xs text-slate-500 mt-1">Hey, {user?.name}!</p>
+        </div>
+        <button
+          onClick={() => setIsProfileOpen(true)}
+          className="relative h-10 w-10 rounded-full hover:opacity-80 transition-opacity focus:outline-none ring-2 ring-slate-100 shadow-sm"
+          title="Profile Settings"
+        >
+          <Avatar className="h-10 w-10">
+            {user?.profilePic && <AvatarImage src={user.profilePic} alt={user.name} />}
+            <AvatarFallback className="bg-blue-600 text-white font-semibold">
+              {user?.name?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
@@ -43,6 +44,7 @@ const Sidebar = ({ selectedUser, onSelectUser }) => {
           users.map((u) => {
             const isOnline = onlineUsers.includes(u._id);
             const isSelected = selectedUser?._id === u._id;
+            const unreadCount = unreadCounts[u._id] || 0;
             return (
               <div
                 key={u._id}
@@ -53,6 +55,7 @@ const Sidebar = ({ selectedUser, onSelectUser }) => {
               >
                 <div className="relative">
                   <Avatar className="h-10 w-10">
+                    {u.profilePic && <AvatarImage src={u.profilePic} alt={u.name} />}
                     <AvatarFallback className="bg-blue-500 text-white">
                       {u.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
@@ -63,6 +66,11 @@ const Sidebar = ({ selectedUser, onSelectUser }) => {
                   <p className="text-sm font-medium text-slate-800 truncate">{u.name}</p>
                   <p className="text-xs text-slate-400">{isOnline ? "Online" : "Offline"}</p>
                 </div>
+                {unreadCount > 0 && (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-sm animate-in scale-in duration-200">
+                    {unreadCount}
+                  </span>
+                )}
               </div>
             );
           })
@@ -74,6 +82,8 @@ const Sidebar = ({ selectedUser, onSelectUser }) => {
           Logout
         </Button>
       </div>
+
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
   );
 };

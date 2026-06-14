@@ -2,6 +2,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cloudinary = require("../config/cloudinary");
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -23,7 +24,7 @@ const registerUser = async (req, res) => {
     res.status(201).json({
       message: "Registration successful",
       token,
-      user: { _id: newUser._id, name: newUser.name, email: newUser.email },
+      user: { _id: newUser._id, name: newUser.name, email: newUser.email, profilePic: newUser.profilePic },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error. Please try again." });
@@ -45,7 +46,7 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      user: { _id: user._id, name: user.name, email: user.email },
+      user: { _id: user._id, name: user.name, email: user.email, profilePic: user.profilePic },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error. Please try again." });
@@ -69,4 +70,50 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getAllUsers, getMe };
+
+
+const updateProfile = async (req, res) => {
+  try {
+    const { profilePic } = req.body;
+    const userId = req.user._id;
+
+    if (!profilePic)
+      return res.status(400).json({ message: "Please provide profile picture" });
+
+    let profilePicUrl = profilePic; // default fallback is base64 string
+
+    const hasCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+                         process.env.CLOUDINARY_CLOUD_NAME !== "your_cloudinary_cloud_name" &&
+                         process.env.CLOUDINARY_API_KEY && 
+                         process.env.CLOUDINARY_API_SECRET;
+
+    if (hasCloudinary) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+          folder: "profile_pics",
+        });
+        profilePicUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.warn("Cloudinary upload failed, falling back to storing base64:", uploadError.message);
+      }
+    } else {
+      console.log("Cloudinary credentials not configured or placeholder. Storing profile picture as base64 in DB.");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: profilePicUrl },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Server error. Please try again." });
+  }
+};
+
+module.exports = { registerUser, loginUser, getAllUsers, getMe, updateProfile };
