@@ -32,7 +32,7 @@ app.get("/api/health", (req, res) => {
   res.json({ message: "✅ Server is running!" });
 });
 
-require("./socket/socketHandler")(io);
+require("./socket/socketHandler").socketHandler(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));

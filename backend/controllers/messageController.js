@@ -44,6 +44,22 @@ const sendMessage = async (req, res) => {
       image: imageUrl,
     });
 
+    // Emit the message via socket immediately after storing in MongoDB
+    try {
+      const { getReceiverSocketIds, getIO } = require("../socket/socketHandler");
+      const io = getIO();
+      if (io) {
+        const receiverSockets = getReceiverSocketIds(receiverId.toString());
+        if (receiverSockets && receiverSockets.size > 0) {
+          receiverSockets.forEach((socketId) => {
+            io.to(socketId).emit("receive_message", newMessage);
+          });
+        }
+      }
+    } catch (socketError) {
+      console.error("Error emitting socket message from backend:", socketError);
+    }
+
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("Error in sendMessage controller:", error);

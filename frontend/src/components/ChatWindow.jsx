@@ -3,15 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSocket } from "../context/SocketContext";
 import { useAuth } from "../context/AuthContext";
+import { useCall } from "../context/CallContext";
 import axiosInstance from "../api/axios";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, Phone, Video } from "lucide-react";
 import toast from "react-hot-toast";
 
 const ChatWindow = ({ selectedUser, messages = [], setMessages, loading = false }) => {
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
+  const { makeCall } = useCall();
   const [sending, setSending] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const messagesEndRef = useRef(null);
@@ -19,6 +21,8 @@ const ChatWindow = ({ selectedUser, messages = [], setMessages, loading = false 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  
 
   useEffect(() => {
     scrollToBottom();
@@ -34,7 +38,6 @@ const ChatWindow = ({ selectedUser, messages = [], setMessages, loading = false 
       });
       const savedMessage = response.data;
       setMessages((prev) => [...prev, savedMessage]);
-      socket?.emit("send_message", { ...savedMessage, receiverId: selectedUser._id });
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error(error.response?.data?.message || "Failed to send message");
@@ -83,13 +86,56 @@ const ChatWindow = ({ selectedUser, messages = [], setMessages, loading = false 
           <p className="font-semibold text-slate-800">{selectedUser.name}</p>
           <p className="text-xs text-slate-400">{isSelectedUserOnline ? "Online" : "Offline"}</p>
         </div>
-        <button 
-          onClick={handleClearChat}
-          className="ml-auto p-2 text-slate-400 hover:text-rose-500 rounded-full hover:bg-slate-50 transition-colors cursor-pointer"
-          title="Clear Chat"
-        >
-          <Trash2 className="h-5 w-5" />
-        </button>
+        <div className="ml-auto flex items-center gap-1">
+          {/* Audio Call Button */}
+          <button
+            onClick={() => {
+              if (!isSelectedUserOnline) {
+                toast.error(`${selectedUser.name} is offline`);
+                return;
+              }
+              makeCall(selectedUser._id, selectedUser.name, "audio");
+            }}
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
+              isSelectedUserOnline
+                ? "text-slate-600 hover:text-blue-600 hover:bg-slate-100"
+                : "text-slate-300 cursor-not-allowed"
+            }`}
+            title="Voice Call"
+            disabled={!isSelectedUserOnline}
+          >
+            <Phone className="h-5 w-5" />
+          </button>
+
+          {/* Video Call Button */}
+          <button
+            onClick={() => {
+              if (!isSelectedUserOnline) {
+                toast.error(`${selectedUser.name} is offline`);
+                return;
+              }
+              makeCall(selectedUser._id, selectedUser.name, "video");
+            }}
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
+              isSelectedUserOnline
+                ? "text-slate-600 hover:text-blue-600 hover:bg-slate-100"
+                : "text-slate-300 cursor-not-allowed"
+            }`}
+            title="Video Call"
+            disabled={!isSelectedUserOnline}
+          >
+            <Video className="h-5 w-5" />
+          </button>
+
+          {/* Clear Chat Button */}
+          <button 
+            onClick={handleClearChat}
+            className="p-2 text-slate-400 hover:text-rose-500 rounded-full hover:bg-slate-50 transition-colors cursor-pointer"
+            title="Clear Chat"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 bg-slate-50">

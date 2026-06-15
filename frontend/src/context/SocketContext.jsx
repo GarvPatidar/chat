@@ -28,6 +28,8 @@ export const SocketProvider = ({ children }) => {
 
       setSocket(newSocket);
 
+
+      
       return () => newSocket.disconnect();
     } else {
       if (socket) {
