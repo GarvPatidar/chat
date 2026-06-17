@@ -1,17 +1,57 @@
+// // api/axios.js
+// import axios from "axios";
+
+// const axiosInstance = axios.create({
+//   baseURL: "https://chat-wjm2.onrender.com/",
+// });
+
+// // Har request mein token automatically add karo
+// axiosInstance.interceptors.request.use((config) => {
+//   const token = localStorage.getItem("token");
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`;
+//   }
+//   return config;
+// });
+
+// export default axiosInstance;
+
+
 // api/axios.js
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://chat-wjm2.onrender.com/",
+  baseURL: "https://chat-wjm2.onrender.com/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Har request mein token automatically add karo
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request Interceptor
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default axiosInstance;
